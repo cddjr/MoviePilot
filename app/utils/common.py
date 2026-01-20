@@ -2,6 +2,8 @@ import asyncio
 import inspect
 import time
 from functools import wraps
+from aiopathlib import AsyncPath
+from pathlib import Path
 from typing import Any, Callable
 
 from app.schemas import ImmediateException
@@ -99,5 +101,38 @@ def log_execution_time(logger: Any = None):
             return async_wrapper
         else:
             return wrapper
+
+    return decorator
+
+
+def forward_to_async(*, target: Callable):
+
+    def decorator(source: Callable):
+        if inspect.iscoroutinefunction(source):
+            raise ValueError(
+                "forward_to_async decorator cannot be applied to an async function."
+            )
+        if not inspect.iscoroutinefunction(target):
+            pass
+            #raise ValueError(
+            #    "forward_to_async decorator cannot be forwarded to a non-async function."
+            #)
+
+        @wraps(source)
+        def wrapper(*args, **kwargs):
+            new_args = [AsyncPath(arg) if isinstance(arg, Path) else arg for arg in args]
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop:
+                return loop.run_until_complete(target(*new_args, **kwargs))
+            else:
+                return asyncio.run(target(*new_args, **kwargs))
+
+        # 设置文档字符串
+        if not source.__doc__ and target.__doc__:
+            wrapper.__doc__ = "以同步的方式调用 " + target.__doc__
+        return wrapper
 
     return decorator

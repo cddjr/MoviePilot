@@ -3,16 +3,19 @@ import hashlib
 import os
 import platform
 import re
+import aioshutil
 import shutil
 import subprocess
 import sys
 import uuid
+from aiopathlib import AsyncPath
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import psutil
 
 from app import schemas
+from app.utils.common import forward_to_async
 
 
 class SystemUtils:
@@ -150,12 +153,37 @@ class SystemUtils:
             return platform.machine()
 
     @staticmethod
+    async def async_copy(src: AsyncPath, dest: AsyncPath) -> Tuple[int, str]:
+        """
+        复制
+        """
+        try:
+            await aioshutil.copy2(src, dest)
+            return 0, ""
+        except Exception as err:
+            return -1, str(err)
+
+    @staticmethod
     def copy(src: Path, dest: Path) -> Tuple[int, str]:
         """
         复制
         """
         try:
             shutil.copy2(src, dest)
+            return 0, ""
+        except Exception as err:
+            return -1, str(err)
+
+    @staticmethod
+    async def async_move(src: AsyncPath, dest: AsyncPath) -> Tuple[int, str]:
+        """
+        移动
+        """
+        try:
+            # 当前目录改名
+            temp = src.replace(src.parent / dest.name)
+            # 移动到目标目录
+            await aioshutil.move(temp, dest)
             return 0, ""
         except Exception as err:
             return -1, str(err)
@@ -175,6 +203,24 @@ class SystemUtils:
             return -1, str(err)
 
     @staticmethod
+    async def async_link(src: AsyncPath, dest: AsyncPath) -> Tuple[int, str]:
+        """
+        硬链接
+        """
+        try:
+            # 准备目标路径，增加后缀 .mp
+            tmp_path = dest.with_suffix(dest.suffix + ".mp")
+            # 检查目标路径是否已存在，如果存在则先unlink
+            if await tmp_path.exists():
+                await tmp_path.unlink()
+            tmp_path.hardlink_to(src)
+            # 硬链接完成，移除 .mp 后缀
+            await aioshutil.move(tmp_path, dest)
+            return 0, ""
+        except Exception as err:
+            return -1, str(err)
+
+    @staticmethod
     def link(src: Path, dest: Path) -> Tuple[int, str]:
         """
         硬链接
@@ -188,6 +234,17 @@ class SystemUtils:
             tmp_path.hardlink_to(src)
             # 硬链接完成，移除 .mp 后缀
             shutil.move(tmp_path, dest)
+            return 0, ""
+        except Exception as err:
+            return -1, str(err)
+
+    @staticmethod
+    async def async_softlink(src: AsyncPath, dest: AsyncPath) -> Tuple[int, str]:
+        """
+        软链接
+        """
+        try:
+            dest.symlink_to(src)
             return 0, ""
         except Exception as err:
             return -1, str(err)
@@ -332,21 +389,21 @@ class SystemUtils:
         return files
 
     @staticmethod
-    def list_sub_directory(directory: Path) -> List[Path]:
+    async def async_list_sub_directory(directory: AsyncPath) -> List[AsyncPath]:
         """
         列出当前目录下的所有子目录（不递归）
         """
-        if not directory.exists():
+        if not await directory.exists():
             return []
 
-        if directory.is_file():
+        if await directory.is_file():
             return []
 
         dirs = []
 
         # 遍历目录
         for path in directory.iterdir():
-            if path.is_dir():
+            if await path.is_dir():
                 if not SystemUtils.is_windows() and path.name.startswith("."):
                     continue
                 if path.name == "@eaDir":
@@ -355,25 +412,35 @@ class SystemUtils:
 
         return dirs
 
+    @forward_to_async(target=async_list_sub_directory)
     @staticmethod
-    def list_sub_file(directory: Path) -> List[Path]:
+    def list_sub_directory(directory: Path) -> List[Path]:
+        pass
+
+    @staticmethod
+    async def async_list_sub_file(directory: AsyncPath) -> List[AsyncPath]:
         """
         列出当前目录下的所有子目录和文件（不递归）
         """
-        if not directory.exists():
+        if not await directory.exists():
             return []
 
-        if directory.is_file():
+        if await directory.is_file():
             return [directory]
 
         items = []
 
         # 遍历目录
         for path in directory.iterdir():
-            if path.is_file():
+            if await path.is_file():
                 items.append(path)
 
         return items
+
+    @forward_to_async(target=async_list_sub_file)
+    @staticmethod
+    def list_sub_file(directory: Path) -> List[Path]:
+        pass
 
     @staticmethod
     def get_directory_size(path: Path) -> int:

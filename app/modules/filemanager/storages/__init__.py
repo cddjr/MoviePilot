@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from aiopathlib import AsyncPath
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple, Callable, Union
 
@@ -273,3 +274,126 @@ class StorageBase(metaclass=ABCMeta):
         __snapshot_file(fileitem)
 
         return files_info
+
+
+class AsyncStorageBase(StorageBase):
+    """
+    StorageBase异步接口
+    """
+    @abstractmethod
+    async def async_list(self, fileitem: schemas.FileItem) -> List[schemas.FileItem]:
+        """
+        浏览文件
+        """
+        pass
+
+    @abstractmethod
+    async def async_create_folder(self, fileitem: schemas.FileItem, name: str) -> Optional[schemas.FileItem]:
+        """
+        创建目录
+        :param fileitem: 父目录
+        :param name: 目录名
+        """
+        pass
+
+    @abstractmethod
+    async def async_get_folder(self, path: AsyncPath) -> Optional[schemas.FileItem]:
+        """
+        获取目录，如目录不存在则创建
+        """
+        pass
+
+    @abstractmethod
+    async def async_get_item(self, path: AsyncPath) -> Optional[schemas.FileItem]:
+        """
+        获取文件或目录，不存在返回None
+        """
+        pass
+
+    async def async_get_parent(self, fileitem: schemas.FileItem) -> Optional[schemas.FileItem]:
+        """
+        获取父目录
+        """
+        return await self.async_get_item(AsyncPath(fileitem.path).parent)
+
+    @abstractmethod
+    async def async_delete(self, fileitem: schemas.FileItem) -> bool:
+        """
+        删除文件
+        """
+        pass
+
+    @abstractmethod
+    async def async_rename(self, fileitem: schemas.FileItem, name: str) -> bool:
+        """
+        重命名文件
+        """
+        pass
+
+    @abstractmethod
+    async def async_download(self, fileitem: schemas.FileItem, path: AsyncPath = None) -> AsyncPath:
+        """
+        下载文件，保存到本地，返回本地临时文件地址
+        :param fileitem: 文件项
+        :param path: 文件保存路径
+        """
+        pass
+
+    @abstractmethod
+    async def async_upload(self, fileitem: schemas.FileItem, path: AsyncPath,
+               new_name: Optional[str] = None) -> Optional[schemas.FileItem]:
+        """
+        上传文件
+        :param fileitem: 上传目录项
+        :param path: 本地文件路径
+        :param new_name: 上传后文件名
+        """
+        pass
+
+    @abstractmethod
+    async def async_detail(self, fileitem: schemas.FileItem) -> Optional[schemas.FileItem]:
+        """
+        获取文件详情
+        """
+        pass
+
+    @abstractmethod
+    async def async_copy(self, fileitem: schemas.FileItem, path: AsyncPath, new_name: str) -> bool:
+        """
+        复制文件
+        :param fileitem: 文件项
+        :param path: 目标目录
+        :param new_name: 新文件名
+        """
+        pass
+
+    @abstractmethod
+    async def async_move(self, fileitem: schemas.FileItem, path: AsyncPath, new_name: str) -> bool:
+        """
+        移动文件
+        :param fileitem: 文件项
+        :param path: 目标目录
+        :param new_name: 新文件名
+        """
+        pass
+
+    @abstractmethod
+    async def async_link(self, fileitem: schemas.FileItem, target_file: AsyncPath) -> bool:
+        """
+        硬链接文件
+        """
+        pass
+
+    @abstractmethod
+    async def async_softlink(self, fileitem: schemas.FileItem, target_file: AsyncPath) -> bool:
+        """
+        软链接文件
+        """
+        pass
+
+    @abstractmethod
+    async def async_usage(self) -> Optional[schemas.StorageUsage]:
+        """
+        存储使用情况
+        """
+        pass
