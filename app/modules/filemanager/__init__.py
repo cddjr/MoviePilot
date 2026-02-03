@@ -81,6 +81,9 @@ class FileManagerModule(_ModuleBase):
                 return False, f"{d.name} 的下载目录未设置"
             if d.storage == "local" and not Path(download_path).exists():
                 return False, f"{d.name} 的下载目录 {download_path} 不存在"
+            if not d.monitor_type:
+                # 没有启用监控 跳过检查媒体库目录
+                continue
             # 媒体库目录
             library_path = d.library_path
             if not library_path:
