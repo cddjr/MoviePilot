@@ -113,7 +113,7 @@ class TransferDirectoryConf(BaseModel):
     download_type_folder: Optional[bool] = False
     # 下载类别子目录
     download_category_folder: Optional[bool] = False
-    # 监控方式 downloader/monitor，None为不监控
+    # 监控方式 downloader/monitor/manual，None为不监控
     monitor_type: Optional[str] = None
     # 监控模式 fast / compatibility
     monitor_mode: Optional[str] = 'fast'

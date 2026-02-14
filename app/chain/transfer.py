@@ -889,6 +889,7 @@ class TransferChain(ChainBase, ConfigReloadMixin, metaclass=Singleton):
                             # 重置计数
                             self._processed_num = 0
                             self._fail_num = 0
+                            self._total_num = 0
 
             except queue.Empty:
                 # 即使队列空了，如果还有任务在运行，也不应该结束进度

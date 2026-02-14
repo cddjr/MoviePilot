@@ -105,6 +105,9 @@ class DirectoryHelper:
             if src_path:
                 # 优先源目录同盘
                 for matched_dir in matched_dirs:
+                    if matched_dir.transfer_type != "link":
+                        # 不需要同盘
+                        return matched_dir
                     matched_path = Path(matched_dir.download_path)
                     if self._is_same_source((src_path, storage or "local"), (matched_path, matched_dir.library_storage)):
                         return matched_dir
